@@ -12,6 +12,9 @@ import android.graphics.Canvas;
 import android.os.AsyncTask;
 import android.os.Bundle;
 
+import com.github.javiersantos.appupdater.AppUpdater;
+import com.github.javiersantos.appupdater.enums.Display;
+import com.github.javiersantos.appupdater.enums.UpdateFrom;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
@@ -100,6 +103,7 @@ Boolean markerShow = false;
 
     ClusterManager<MyItem> mClusterManager;
 
+    AppUpdater appUpdater;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -107,6 +111,16 @@ Boolean markerShow = false;
 
         //SharedPreferences preferences = getSharedPreferences("prefs", MODE_PRIVATE);
         //boolean firstStart = preferences.getBoolean("firststart", true);
+
+
+        appUpdater = new AppUpdater(this)
+                .setGitHubUserAndRepo("GauravNadar", "COVID-19")
+                .setDisplay(Display.DIALOG)
+                    .setUpdateFrom(UpdateFrom.XML)
+                .setUpdateXML("https://raw.githubusercontent.com/GauravNadar/COVID-19/master/app/update.xml");
+        appUpdater.start();
+
+
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
