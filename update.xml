@@ -1,7 +1,7 @@
 <CovidTracker>
     <update>
-        <latestVersion>1.0.0</latestVersion>
-        <latestVersionCode>1</latestVersionCode>
+        <latestVersion>1.0.1</latestVersion>
+        <latestVersionCode>2</latestVersionCode>
         <url>https://github.com/javiersantos/AppUpdater/releases</url>
     </update>
 </CovidTracker>
