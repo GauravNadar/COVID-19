@@ -1,19 +1,27 @@
 package com.gauravnadar.covid19stats;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 
 import com.github.javiersantos.appupdater.AppUpdater;
 import com.github.javiersantos.appupdater.enums.Display;
+import com.github.javiersantos.appupdater.enums.Duration;
 import com.github.javiersantos.appupdater.enums.UpdateFrom;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -82,7 +90,6 @@ public class MainActivity extends AppCompatActivity
     ArrayList<DailyReportsModel> dailList;
 
 
-
     BottomSheetBehavior bottomSheetBehavior;
 
 
@@ -90,9 +97,9 @@ public class MainActivity extends AppCompatActivity
     MapView mapView;
     private static final String MAP_VIEW_BUNDLE_KEY = "MapViewBundleKey";
 
-ProgressDialog progress;
+    ProgressDialog progress;
 
-Boolean markerShow = false;
+    Boolean markerShow = false;
     Marker mk = null;
 
     Boolean MapSet = false;
@@ -104,23 +111,69 @@ Boolean markerShow = false;
     ClusterManager<MyItem> mClusterManager;
 
     AppUpdater appUpdater;
+
+
+
+
+
+    AlertDialog.Builder alert;
+    AlertDialog dialog;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //SharedPreferences preferences = getSharedPreferences("prefs", MODE_PRIVATE);
-        //boolean firstStart = preferences.getBoolean("firststart", true);
+        alert = new AlertDialog.Builder(this);
+        alert.setCancelable(false);
+        alert.setMessage("You are not connected to Network, Please oonnect to Internet and Open the Application");
+        alert.setTitle("No Network Found");
+        alert.setPositiveButton("OKAY", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+
+                finish();
+            }
+        });
+        dialog = alert.create();
 
 
         appUpdater = new AppUpdater(this)
                 .setGitHubUserAndRepo("GauravNadar", "COVID-19")
                 .setDisplay(Display.DIALOG)
-                    .setUpdateFrom(UpdateFrom.XML)
-                .setUpdateXML("https://raw.githubusercontent.com/GauravNadar/COVID-19/master/app/update.xml");
+                .setUpdateFrom(UpdateFrom.XML)
+                .setTitleOnUpdateAvailable("Update available")
+                .setContentOnUpdateAvailable("Please update the App to Continue")
+                .setTitleOnUpdateNotAvailable("Update not available")
+                .setContentOnUpdateNotAvailable("No update available. Check for updates again later!")
+                .setButtonUpdate("Update")
+                .setButtonDismissClickListener(new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        finish();
+                    }
+                })
+                .setButtonDoNotShowAgainClickListener(new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        finish();
+                    }
+                })
+                // Notification icon
+                .setCancelable(false) // Dialog could not be dismissable
+                .setUpdateXML("https://raw.githubusercontent.com/GauravNadar/COVID-19/master/update.xml")
+                .showAppUpdated(false);
+
+
+
+        Boolean signal = isNetworkConnected();
+        if(!signal)
+        {
+            dialog.show();
+        }
+
         appUpdater.start();
-
-
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -132,14 +185,12 @@ Boolean markerShow = false;
                /* Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show();*/
 
-               if(!MapSet)
-                {
+                if (!MapSet) {
                     getDailyReports();
                     loadMap();
-                    usage.setVisibility(View.VISIBLE);
+                    //usage.setVisibility(View.VISIBLE);
                     MapSet = true;
-                }
-                else{
+                } else {
 
                     Toast.makeText(MainActivity.this, "All Locations Already Tracked", Toast.LENGTH_LONG).show();
                 }
@@ -164,30 +215,15 @@ Boolean markerShow = false;
 
 
 
+
+
         startJob();
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-       // View bottomsheet = findViewById(R.id.nested);
+        // View bottomsheet = findViewById(R.id.nested);
 
         mapView = findViewById(R.id.map);
-       // bottomSheetBehavior = BottomSheetBehavior.from(bottomsheet);
-
-
-
-
-
+        // bottomSheetBehavior = BottomSheetBehavior.from(bottomsheet);
 
 
         dailList = new ArrayList<>();
@@ -196,10 +232,8 @@ Boolean markerShow = false;
         listWLL = new ArrayList<>();
 
 
-
         Bundle mapViewBundle = null;
-        if(savedInstanceState != null)
-        {
+        if (savedInstanceState != null) {
             mapViewBundle = savedInstanceState.getBundle(MAP_VIEW_BUNDLE_KEY);
         }
 
@@ -208,7 +242,6 @@ Boolean markerShow = false;
         mapView.getMapAsync(this);
 
         getDailyReports();
-
 
 
         try {
@@ -225,10 +258,9 @@ Boolean markerShow = false;
         }
 
 
-
         // getData();
 
-     //######################################################################################
+        //######################################################################################
 
 
     }
@@ -238,7 +270,7 @@ Boolean markerShow = false;
 
         ComponentName componentName = new ComponentName(this, Scheduler.class);
         JobInfo info = new JobInfo.Builder(111, componentName)
-                .setPeriodic(15*60*1000)
+                .setPeriodic(15 * 60 * 1000)
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
                 .setPersisted(true)
                 .build();
@@ -248,13 +280,10 @@ Boolean markerShow = false;
         int resutCode = scheduler.schedule(info);
 
 
-        if(resutCode == JobScheduler.RESULT_SUCCESS)
-        {
+        if (resutCode == JobScheduler.RESULT_SUCCESS) {
             Log.d("Job", "Result Success");
 
-        }
-        else
-        {
+        } else {
             Log.d("Job", "Result Failed");
         }
 
@@ -264,7 +293,7 @@ Boolean markerShow = false;
     private void getDailyReports() {
 
 
-       loadDailyReports();
+        loadDailyReports();
 
 
     }
@@ -280,20 +309,15 @@ Boolean markerShow = false;
             while ((nextLine = reader.readNext()) != null) {
 
 
-    DailyReportsModel data = new DailyReportsModel(nextLine[2], nextLine[3], nextLine[4], nextLine[5], nextLine[6], nextLine[7], nextLine[8], nextLine[9], nextLine[10]);
-                if(nextLine[3].equals("Country_Region"))
-                {}
-                else
-                {
+                DailyReportsModel data = new DailyReportsModel(nextLine[2], nextLine[3], nextLine[4], nextLine[5], nextLine[6], nextLine[7], nextLine[8], nextLine[9], nextLine[10]);
+                if (nextLine[3].equals("Country_Region")) {
+                } else {
                     dailList.add(data);
                 }
 
 
-
-
             }
-Log.d("sixe", String.valueOf(dailList.size()));
-
+            Log.d("sixe", String.valueOf(dailList.size()));
 
 
             //loadMap();
@@ -313,7 +337,7 @@ Log.d("sixe", String.valueOf(dailList.size()));
         super.onSaveInstanceState(outState, outPersistentState);
 
         Bundle mapViewBundle = outState.getBundle(MAP_VIEW_BUNDLE_KEY);
-        if(mapViewBundle == null){
+        if (mapViewBundle == null) {
             mapViewBundle = new Bundle();
             outState.putBundle(MAP_VIEW_BUNDLE_KEY, mapViewBundle);
         }
@@ -322,22 +346,18 @@ Log.d("sixe", String.valueOf(dailList.size()));
     }
 
 
-
-
-
     @Override
     public void onMapReady(GoogleMap googleMap) {
 
-        Log.e("timing","onMapReady");
-map = googleMap;
-
+        Log.e("timing", "onMapReady");
+        map = googleMap;
 
 
         map.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
 
-                if(markerShow) {
+                if (markerShow) {
                     mk.remove();
                 }
 
@@ -347,69 +367,62 @@ map = googleMap;
         final IconGenerator icon = new IconGenerator(this);
 
         map.setOnCircleClickListener(new GoogleMap.OnCircleClickListener() {
-    @Override
-    public void onCircleClick(Circle circle) {
+            @Override
+            public void onCircleClick(Circle circle) {
 
 
-        if(markerShow)
-        {
-            //mk.setVisible(false);
-            mk.remove();
-        }
+                if (markerShow) {
+                    //mk.setVisible(false);
+                    mk.remove();
+                }
 
-        String co = null, d = null, r= null, n=null, p=null;
+                String co = null, d = null, r = null, n = null, p = null;
 
-        DailyReportsModel model1= new DailyReportsModel();
+                DailyReportsModel model1 = new DailyReportsModel();
 
-        for (DailyReportsModel model : dailList)
-        {
-            if(model.getLongitude().equals(String.valueOf(circle.getCenter().longitude))  && model.getLatitude().equals(String.valueOf(circle.getCenter().latitude)))
-            {
-                co = model.getConfirmed();
-                 d = model.getDeaths();
-                r = model.getRecovered();
-                n = model.getCountry();
-                p = model.getProvince();
+                for (DailyReportsModel model : dailList) {
+                    if (model.getLongitude().equals(String.valueOf(circle.getCenter().longitude)) && model.getLatitude().equals(String.valueOf(circle.getCenter().latitude))) {
+                        co = model.getConfirmed();
+                        d = model.getDeaths();
+                        r = model.getRecovered();
+                        n = model.getCountry();
+                        p = model.getProvince();
+
+                    }
+                }
+
+                mk = map.addMarker(new MarkerOptions()
+                        .icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(MainActivity.this, R.drawable.amu_bubble_shadow, co, d, r, n, p)))
+                        .position(circle.getCenter())
+                        .anchor(icon.getAnchorU(), icon.getAnchorV())
+                );
+
+
+                map.moveCamera(CameraUpdateFactory.newLatLng(circle.getCenter()));
+
+                markerShow = true;
+
 
             }
-        }
-
-        mk = map.addMarker(new MarkerOptions()
-                .icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(MainActivity.this, R.drawable.amu_bubble_shadow, co , d , r , n, p)))
-                .position(circle.getCenter())
-                .anchor(icon.getAnchorU(), icon.getAnchorV())
-        );
+        });
 
 
-        map.moveCamera(CameraUpdateFactory.newLatLng(circle.getCenter()));
+        map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
 
-        markerShow = true;
-
-
-
-
-    }
-});
-
-
-map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
-    @Override
-    public boolean onMarkerClick(Marker marker) {
-
-        Toast.makeText(MainActivity.this, marker.getPosition().toString(), Toast.LENGTH_LONG).show();
-        return true;
-    }
-});
-
-
+                Toast.makeText(MainActivity.this, marker.getPosition().toString(), Toast.LENGTH_LONG).show();
+                return true;
+            }
+        });
 
 
     }
 
 
-    public void loadMap(){
+    public void loadMap() {
 
-        Log.e("timing","loadMap");
+        Log.e("timing", "loadMap");
 
         final IconGenerator icon = new IconGenerator(this);
         String rColour = "";
@@ -426,11 +439,10 @@ map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
         mClusterManager.setRenderer(renderer);
         DailyReportsModel model = new DailyReportsModel();
 
-        for (int i=1; i<dailList.size(); i++)
-        {
+        for (int i = 1; i < dailList.size(); i++) {
 
 
-               // latLng = new LatLng(Double.valueOf(dailList.get(i).getLatitude()),  Double.valueOf(dailList.get(i).getLongitude()));
+            // latLng = new LatLng(Double.valueOf(dailList.get(i).getLatitude()),  Double.valueOf(dailList.get(i).getLongitude()));
                /* Circle c = map.addCircle(new CircleOptions()
                         .center(latLng)
                         .radius(fixed)
@@ -442,19 +454,15 @@ map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
                 );*/
 
 
-    MyItem offsetItem = new MyItem(Double.valueOf(dailList.get(i).getLatitude()), Double.valueOf(dailList.get(i).getLongitude()));
+            MyItem offsetItem = new MyItem(Double.valueOf(dailList.get(i).getLatitude()), Double.valueOf(dailList.get(i).getLongitude()));
 
 
-    mClusterManager.addItem(offsetItem);
+            mClusterManager.addItem(offsetItem);
 
 
-
-
-            LatLng latLng2 = new LatLng(Double.valueOf(dailList.get(i).getLatitude()),  Double.valueOf(dailList.get(i).getLongitude()));
+            LatLng latLng2 = new LatLng(Double.valueOf(dailList.get(i).getLatitude()), Double.valueOf(dailList.get(i).getLongitude()));
             WeightedLatLng latLng3 = new WeightedLatLng(latLng2, 500);
             int rad = 0;
-
-
 
 
             listLL.add(latLng2);
@@ -496,9 +504,6 @@ map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             }*/
 
 
-
-
-
         }
 
 
@@ -517,22 +522,19 @@ map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
             public boolean onClusterItemClick(MyItem myItem) {
 
-               // Toast.makeText(MainActivity.this, myItem.getPosition().toString(), Toast.LENGTH_LONG).show();
+                // Toast.makeText(MainActivity.this, myItem.getPosition().toString(), Toast.LENGTH_LONG).show();
 
-                if(markerShow)
-                {
+                if (markerShow) {
                     //mk.setVisible(false);
                     mk.remove();
                 }
 
-                String co = null, d = null, r= null, n=null, p=null;
+                String co = null, d = null, r = null, n = null, p = null;
 
-                DailyReportsModel model1= new DailyReportsModel();
+                DailyReportsModel model1 = new DailyReportsModel();
 
-                for (DailyReportsModel model : dailList)
-                {
-                    if(model.getLongitude().equals(String.valueOf(myItem.getPosition().longitude))  && model.getLatitude().equals(String.valueOf(myItem.getPosition().latitude)))
-                    {
+                for (DailyReportsModel model : dailList) {
+                    if (model.getLongitude().equals(String.valueOf(myItem.getPosition().longitude)) && model.getLatitude().equals(String.valueOf(myItem.getPosition().latitude))) {
                         co = model.getConfirmed();
                         d = model.getDeaths();
                         r = model.getRecovered();
@@ -543,7 +545,7 @@ map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
                 }
 
                 mk = map.addMarker(new MarkerOptions()
-                        .icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(MainActivity.this, R.drawable.amu_bubble_shadow, co , d , r , n, p)))
+                        .icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(MainActivity.this, R.drawable.amu_bubble_shadow, co, d, r, n, p)))
                         .position(myItem.getPosition())
                         .anchor(icon.getAnchorU(), icon.getAnchorV())
                 );
@@ -563,19 +565,15 @@ map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             public boolean onClusterClick(Cluster<MyItem> cluster) {
 
 
-                Toast.makeText(MainActivity.this, String.valueOf(cluster.getSize()), Toast.LENGTH_LONG).show();
+                Toast.makeText(MainActivity.this,"Zoom In to view grouped markers", Toast.LENGTH_LONG).show();
                 return true;
             }
         });
 
 
+        usage.setText("Global Map\\n you can pinch zoom  move around and click on markers to view current stats");
+
     }
-
-
-
-
-
-
 
 
     @Override
@@ -618,17 +616,19 @@ map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
 
         if (id == R.id.nav_home) {
 
+            startActivity(new Intent(getApplicationContext(), MainActivity.class));
         } else if (id == R.id.nav_gallery) {
 
-            startActivity(new Intent(MainActivity.this, CountryList.class));
+            startActivity(new Intent(getApplicationContext(), CountryList.class));
 
         } else if (id == R.id.nav_slideshow) {
 
-        } else if (id == R.id.nav_tools) {
-
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
+            Intent sendMail = new Intent(android.content.Intent.ACTION_SEND);
+            sendMail.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            sendMail.setType("plain/text");
+            sendMail.putExtra(android.content.Intent.EXTRA_EMAIL, new String[]{"nadargaurav@gmail.com"});
+            sendMail.putExtra(Intent.EXTRA_SUBJECT, "Bug Reporting for COVID-19 Tracker Android Application");
+            startActivity(Intent.createChooser(sendMail, "Send Bug Report..."));
 
         }
 
@@ -644,21 +644,19 @@ map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
 
         //CircleImageView markerImage = (CircleImageView) marker.findViewById(R.id.user_dp);
         //markerImage.setImageResource(resource);
-        TextView c = (TextView)marker.findViewById(R.id.c);
-        TextView d = (TextView)marker.findViewById(R.id.d);
-        TextView r = (TextView)marker.findViewById(R.id.r);
-        TextView n = (TextView)marker.findViewById(R.id.name);
-        TextView p = (TextView)marker.findViewById(R.id.province);
+        TextView c = (TextView) marker.findViewById(R.id.c);
+        TextView d = (TextView) marker.findViewById(R.id.d);
+        TextView r = (TextView) marker.findViewById(R.id.r);
+        TextView n = (TextView) marker.findViewById(R.id.name);
+        TextView p = (TextView) marker.findViewById(R.id.province);
 
         c.setText(ct);
         d.setText(dt);
         r.setText(rt);
         n.setText(na);
-        if(po.equals(""))
-        {
+        if (po.equals("")) {
             p.setText("All States");
-        }
-        else {
+        } else {
             p.setText(po);
         }
         DisplayMetrics displayMetrics = new DisplayMetrics();
@@ -713,7 +711,7 @@ map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
     }
 
 
-    public class BackgroundTask extends AsyncTask<Void, Void, Void>{
+    public class BackgroundTask extends AsyncTask<Void, Void, Void> {
 
         @Override
         protected void onPreExecute() {
@@ -739,56 +737,45 @@ map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
         }
     }
 
+    public boolean isNetworkConnected() {
 
-    public static class Worker2 extends Thread {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        private static final AtomicBoolean alive = new AtomicBoolean(true);
-        private ConcurrentLinkedQueue taskQueue = new ConcurrentLinkedQueue();
-        private ProgressDialog progress;
-        Context context;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 
-        public Worker2(Context context)
-        {
-            super("Worker");
-            this.context = context;
-
-            start();
-            progress = new ProgressDialog(context);
-            progress.setMessage("This may take up few seconds depending on your Internet speed");
-            progress.setTitle("Loading Global Data");
-            progress.setCanceledOnTouchOutside(false);
-            //progress.show();
-        }
-
-        @Override
-        public void run() {
-
-            while (alive.get()) {
-                Runnable task = (Runnable) taskQueue.poll();
-                if(task!= null)
-                {
-                    task.run();
-       // progress.show();
-
+            NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
+            if (capabilities != null) {
+                if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                    return true;
+                } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    return true;
+                } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                    return true;
                 }
             }
 
-            Log.i("Terminated", "xx");
-            progress.dismiss();
+        } else {
+
+            try {
+                NetworkInfo info = cm.getActiveNetworkInfo();
+                if (info != null && info.isConnected()) {
+                    return true;
+                }
+            } catch (Exception e) {
+                Log.i("status", e.getMessage());
+
+            }
         }
 
+        return false;
 
-        public Worker2 execute(Runnable task){
-
-            taskQueue.add(task);
-            return this;
-        }
-
-        public void quit()
-        {
-            alive.set(false);
-        }
     }
+
+
+
+
+
+
 
 
 
@@ -796,6 +783,7 @@ map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
     protected void onStart() {
         super.onStart();
         mapView.onStart();
+        appUpdater.start();
     }
 
     @Override
@@ -826,6 +814,7 @@ map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
     protected void onResume() {
         super.onResume();
         mapView.onResume();
+        appUpdater.start();
     }
 
 

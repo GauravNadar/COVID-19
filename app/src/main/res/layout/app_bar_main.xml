@@ -24,24 +24,30 @@
     <include layout="@layout/content_main" />
 
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/info"
+
+
+    <TextView
+        android:id="@+id/textView8"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginRight="16dp"
-        android:layout_marginBottom="250dp"
-        app:srcCompat="@drawable/info"
+        android:text="Tracking\n Button"
+        android:textAlignment="center"
+        android:textSize="16dp"
+        android:textStyle="bold"
         android:layout_gravity="right|bottom"
-        />
+        android:layout_marginRight="16dp"
+        android:layout_marginBottom="30dp"/>
+
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_marginBottom="150dp"
+        android:layout_marginBottom="70dp"
         android:layout_marginRight="16dp"
         app:srcCompat="@drawable/track_map" />
+
 
 
 

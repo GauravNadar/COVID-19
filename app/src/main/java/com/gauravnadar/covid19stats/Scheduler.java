@@ -43,7 +43,7 @@ Boolean jobCancelled = false;
     int task = 0;
 
     public static String TAG = "Job";
-    private MainActivity.Worker2 worker;
+    private Worker worker;
     Handler handler = new Handler(Looper.getMainLooper()){
 
         @Override
@@ -57,7 +57,7 @@ Boolean jobCancelled = false;
     @Override
     public boolean onStartJob(JobParameters jobParameters) {
 
-worker = new MainActivity.Worker2(getApplicationContext());
+worker = new Worker();
 
         Log.d(TAG, "onStart");
 
