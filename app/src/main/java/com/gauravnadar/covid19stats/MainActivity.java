@@ -35,7 +35,6 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import android.os.Message;
 import android.os.PersistableBundle;
 import android.util.DisplayMetrics;
 import android.util.Log;

@@ -88,7 +88,7 @@ List<DailyReportsModel> dailList;
         progress = (ProgressBar) v.findViewById(R.id.progressBar);
         update = (TextView) v.findViewById(R.id.update2);
         dailList = new ArrayList<>();
-        update.setText("Loadind data please wait");
+        update.setText("Loading data please wait");
 
 
         Bundle mapViewBundle = null;
@@ -170,7 +170,7 @@ List<DailyReportsModel> dailList;
         protected void onPreExecute() {
             super.onPreExecute();
             progress.setProgress(0);
-            update.setText("Loding data 0%");
+            update.setText("Loading data 0%");
             worker = new Worker();
             Message message =  Message.obtain();
             Log.i("onPre", "0");
