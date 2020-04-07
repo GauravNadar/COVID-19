@@ -178,7 +178,7 @@ public class MainActivity extends AppCompatActivity
                 })
                 // Notification icon
                 .setCancelable(false) // Dialog could not be dismissable
-                .setUpdateXML("https://raw.githubusercontent.com/GauravNadar/COVID-19/master/update.xml")
+                .setUpdateXML("https://raw.githubusercontent.com/GauravNadar/COVID-19/master/app/update.xml")
                 .showAppUpdated(false);
 
 
