@@ -1,6 +1,7 @@
 package com.gauravnadar.covid19stats;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.app.job.JobParameters;
 import android.app.job.JobScheduler;
 import android.app.job.JobService;
@@ -34,34 +35,55 @@ import okhttp3.Response;
 
 public class Scheduler extends JobService {
 
-Boolean jobCancelled = false;
+    Boolean jobCancelled = false;
 
     FileOutputStream out = null;
     FileOutputStream out2 = null;
     FileOutputStream out3 = null;
     FileOutputStream Dailyout = null;
     int task = 0;
+    ProgressDialog progress;
 
     public static String TAG = "Job";
     private Worker worker;
-    Handler handler = new Handler(Looper.getMainLooper()){
+    int check=0;
+    Handler handler = new Handler(Looper.getMainLooper()) {
 
         @Override
         public void handleMessage(@NonNull Message msg) {
             super.handleMessage(msg);
             Log.e("XXXXXXXXXXX", (String) msg.obj);
+
+            if(msg.arg1==1)
+            {
+               //progress.show();
+
+
+            }
+            else if(msg.arg1==2)
+            {
+                //progress.dismiss();
+            }
         }
+
+
+
     };
 
 
     @Override
     public boolean onStartJob(JobParameters jobParameters) {
 
-worker = new Worker();
+      Message message =  Message.obtain();
+      message.what = 1;
+        //progress = new ProgressDialog();
+
+
+        worker = new Worker();
 
         Log.d(TAG, "onStart");
 
-       loadFiles(jobParameters);
+        loadFiles(jobParameters);
 
 
         return true;
@@ -74,83 +96,67 @@ worker = new Worker();
 
         task = 0;
 
-        if(jobCancelled)
-        {
+        if (jobCancelled) {
 
         }
 
 
         DateFormat df = new SimpleDateFormat("MM-dd-yyyy");
-       Calendar cal = Calendar.getInstance();
+        Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DATE, -1);
         String date = df.format(cal.getTime());
 
-       df.setTimeZone(TimeZone.getTimeZone("UTC"));
-       final String date2 = df.format(cal.getTime());
+        df.setTimeZone(TimeZone.getTimeZone("UTC"));
+        final String date2 = df.format(cal.getTime());
 
         Log.e("date", date);
         Log.e("date", date2);
 
 
-
-                worker.execute(new Runnable() {
-                    @Override
-                    public void run() {
-
+        worker.execute(new Runnable() {
+            @Override
+            public void run() {
 
 
+                try {
+                    out = openFileOutput("stats.csv", MODE_PRIVATE);
+
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+
+                final OkHttpClient client = new OkHttpClient();
+                String url = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv";
+
+                final Request request = new Request.Builder()
+                        .url(url)
+                        .build();
 
 
+
+                try {
+                    Response response = client.newCall(request).execute();
+String data = response.body().string();
+                    out.write(data.getBytes());
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    if (out != null) {
                         try {
-                            out = openFileOutput("stats.csv", MODE_PRIVATE);
-
-                        } catch (FileNotFoundException e) {
-                            e.printStackTrace();
-                        }
-
-                        OkHttpClient client = new OkHttpClient();
-                        String url = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv";
-
-                        Request request = new Request.Builder()
-                                .url(url)
-                                .build();
-
-                        client.newCall(request).enqueue(new Callback() {
-                            @Override
-                            public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                                Log.e("failed", e.getMessage());
-                            }
-
-                            @Override
-                            public void onResponse(@NotNull Call call, @NotNull final Response response) throws IOException {
-                                //Log.e("Success", response.body().string());
-                                final String data = response.body().string().toString();
-
-
-
-
-
-
-                                try {
-                            out.write(data.getBytes());
+                            out.close();
+                            //loadData();
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-                        finally {
-                            if (out != null) {
-                                try {
-                                    out.close();
-                                    //loadData();
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        }
-                        Message msg = Message.obtain();
-                        msg.obj = "task1 is done";
-                        handler.sendMessage(msg);
                     }
-                });
+                }
+                Message msg = Message.obtain();
+                msg.obj = "task1 is done";
+                msg.arg1 = 1;
+                handler.sendMessage(msg);
+            }
+        });
 
 
            /*     new Thread(new Runnable() {
@@ -177,9 +183,6 @@ worker = new Worker();
 
                     }
                 }).start();*/
-            }
-        });
-
 
 
 
@@ -207,17 +210,6 @@ worker = new Worker();
                             e.printStackTrace();
                         }
 
-                        client2.newCall(request2).enqueue(new Callback() {
-                            @Override
-                            public void onFailure(@NotNull Call call, @NotNull IOException e) {
-
-                            }
-
-                            @Override
-                            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-
-
-                                final String data = response.body().string().toString();
 
 
 
@@ -225,14 +217,12 @@ worker = new Worker();
 
 
                         try {
-                            if(response.code()==200) {
+                            Response response = client2.newCall(request2).execute();
+                            String data = response.body().string();
                                 out2.write(data.getBytes());
                                 Log.e("error", "not null");
-                            }
-                            else
-                            {
-                                Log.e("error", "null");
-                            }
+
+
                             task++;
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -255,6 +245,8 @@ else {
                         }
                         Message msg = Message.obtain();
                         msg.obj = "task2 is done";
+                        msg.arg1=0;
+                        msg.what=2;
                         handler.sendMessage(msg);
 
                     }
@@ -285,10 +277,10 @@ else {
                 }).start();*/
 
 
-            }
 
 
-        });
+
+
 
 
 
@@ -321,17 +313,6 @@ else {
                             e.printStackTrace();
                         }
 
-                        client3.newCall(request3).enqueue(new Callback() {
-                            @Override
-                            public void onFailure(@NotNull Call call, @NotNull IOException e) {
-
-                            }
-
-                            @Override
-                            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-
-
-                                final String data2 = response.body().string().toString();
 
 
 
@@ -339,7 +320,9 @@ else {
 
 
                         try {
-                            out3.write(data2.getBytes());
+                            Response response = client3.newCall(request3).execute();
+                            String data = response.body().string();
+                            out3.write(data.getBytes());
                             task++;
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -355,6 +338,7 @@ else {
                         }
                         Message msg = Message.obtain();
                         msg.obj = "task3 is done";
+                        msg.arg1=0;
                         handler.sendMessage(msg);
 
                     }
@@ -384,8 +368,7 @@ else {
                     }
                 }).start();*/
                 ;
-            }
-        });
+
 
 
 
@@ -415,17 +398,6 @@ else {
                                .url(urlD)
                                .build();
 
-                       clientD.newCall(requestD).enqueue(new Callback() {
-                           @Override
-                           public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                               Log.e("failed", e.getMessage());
-                           }
-
-                           @Override
-                           public void onResponse(@NotNull Call call, @NotNull final Response response) throws IOException {
-                               //Log.e("Success", response.body().string());
-                               final String dataD = response.body().string().toString();
-
 
 
 
@@ -434,7 +406,9 @@ else {
 
 
                                try {
-                           Dailyout.write(dataD.getBytes());
+                                   Response response = clientD.newCall(requestD).execute();
+                                   String data = response.body().string();
+                           Dailyout.write(data.getBytes());
                            task++;
                        } catch (IOException e) {
                            e.printStackTrace();
@@ -452,12 +426,19 @@ else {
                        }
                        Message msg = Message.obtain();
                        msg.obj = "task4 is done";
+                       msg.arg1=2;
                        handler.sendMessage(msg);
-                               jobFinished(jobParameters, false);
-                               worker.quit();
+                       jobFinished(jobParameters, false);
+
 
                    }
                });
+
+
+
+
+
+
 
                /* new Thread(new Runnable() {
                     @Override
@@ -489,11 +470,7 @@ else {
 
 
 
-            }
 
-
-
-        });
 
 
 

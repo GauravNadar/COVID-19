@@ -7,15 +7,29 @@
         <item
             android:id="@+id/nav_home"
             android:icon="@drawable/home"
-            android:title="@string/menu_home" />
+            android:title="World Map View" />
         <item
             android:id="@+id/nav_gallery"
             android:icon="@drawable/list"
-            android:title="Country List" />
+            android:title="World List View" />
+
+
+        <item
+            android:id="@+id/india_list"
+            android:icon="@drawable/map"
+            android:title="India Map View"/>
+
+
+        <item
+            android:id="@+id/india_listView"
+            android:icon="@drawable/list"
+            android:title="India List View"/>
+
         <item
             android:id="@+id/nav_slideshow"
             android:icon="@drawable/bug"
-            android:title="Report Bug (Email Developer)"/>
+            android:title="Report Bug (works with email)"/>
+
 
     </group>
 

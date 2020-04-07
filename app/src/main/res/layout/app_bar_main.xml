@@ -26,18 +26,6 @@
 
 
 
-    <TextView
-        android:id="@+id/textView8"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Tracking\n Button"
-        android:textAlignment="center"
-        android:textSize="16dp"
-        android:textStyle="bold"
-        android:layout_gravity="right|bottom"
-        android:layout_marginRight="16dp"
-        android:layout_marginBottom="30dp"/>
-
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab"
@@ -46,7 +34,8 @@
         android:layout_gravity="bottom|end"
         android:layout_marginBottom="70dp"
         android:layout_marginRight="16dp"
-        app:srcCompat="@drawable/track_map" />
+        android:visibility="gone"
+         />
 
 
 

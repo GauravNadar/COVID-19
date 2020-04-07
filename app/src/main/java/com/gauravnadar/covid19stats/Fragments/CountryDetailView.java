@@ -1,21 +1,30 @@
-package com.gauravnadar.covid19stats;
+package com.gauravnadar.covid19stats.Fragments;
+
+
+import android.app.Activity;
+import android.content.Context;
+import android.os.Bundle;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.content.Context;
-import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.gauravnadar.covid19stats.CountryDetail;
+import com.gauravnadar.covid19stats.GetDataServices;
 import com.gauravnadar.covid19stats.Modals.Model;
+import com.gauravnadar.covid19stats.NewsModel;
+import com.gauravnadar.covid19stats.R;
+import com.gauravnadar.covid19stats.RetrofitClientInstance;
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.components.AxisBase;
 import com.github.mikephil.charting.components.XAxis;
@@ -34,7 +43,6 @@ import com.opencsv.CSVReader;
 import com.squareup.picasso.Picasso;
 
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -47,14 +55,16 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class CountryDetail extends AppCompatActivity implements OnMapReadyCallback {
+/**
+ * A simple {@link Fragment} subclass.
+ */
+public class CountryDetailView extends Fragment implements OnMapReadyCallback {
+
+
 
     String country, province;
-    TextView name, c_case, d_case, r_case;
+    TextView name, c_case, d_case, r_case, provi, news_banner;
     BarChart chart;
-
-    FileOutputStream out = null;
-    FileOutputStream out2 = null;
 
     ArrayList<Map<String, String>> list;
 
@@ -64,12 +74,12 @@ public class CountryDetail extends AppCompatActivity implements OnMapReadyCallba
 
     String third, second, last;
     String d_third, d_second, d_last;
-String day3, day2, day1;
-String r_third, r_second, r_last;
+    String day3, day2, day1;
+    String r_third, r_second, r_last;
     String[] countries;
 
     MapView mapView;
-GoogleMap map;
+    GoogleMap map;
     private static final String MAP_VIEW_BUNDLE_KEY = "MapViewBundleKey";
 
     List<Model> coords;
@@ -80,22 +90,34 @@ GoogleMap map;
     NewsAdapter adapter;
 
     String ISO;
+    Activity main;
+
+    public CountryDetailView() {
+        // Required empty public constructor
+    }
+
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_country_detail);
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        // Inflate the layout for this fragment
 
-        country = getIntent().getStringExtra("country_name");
-        province = getIntent().getStringExtra("province_name");
+        View view = inflater.inflate(R.layout.fragment_country_detail_view, container, false);
 
-        name = findViewById(R.id.c_name);
-        c_case = findViewById(R.id.c_cases);
-        d_case = findViewById(R.id.d_cases);
-        r_case = findViewById(R.id.r_cases);
-        chart = (BarChart) findViewById(R.id.chart1);
-        mapView = (MapView) findViewById(R.id.mapView);
-        recyclerView = (RecyclerView) findViewById(R.id.news_recycler);
+
+
+                country = getArguments().getString("country_name");
+        province = getArguments().getString("province_name");
+
+        name = view.findViewById(R.id.c_name);
+        provi = view.findViewById(R.id.provi);
+        c_case = view.findViewById(R.id.c_cases);
+        d_case = view.findViewById(R.id.d_cases);
+        r_case = view.findViewById(R.id.r_cases);
+        chart = (BarChart) view.findViewById(R.id.chart1);
+        mapView = (MapView) view.findViewById(R.id.mapView);
+        recyclerView = (RecyclerView) view.findViewById(R.id.news_recycler);
+        news_banner = (TextView) view.findViewById(R.id.news_heading);
 
 
         Bundle mapViewBundle = null;
@@ -121,7 +143,7 @@ GoogleMap map;
         String CapIso = countrieNames.get(country);
         if(CapIso == null)
         {
-         ISO = "";
+            ISO = "";
         }
         else {
             ISO = CapIso.toLowerCase();
@@ -138,23 +160,24 @@ GoogleMap map;
 
 
 
-list = new ArrayList<>();
-newsList = new ArrayList<>();
+        list = new ArrayList<>();
+        newsList = new ArrayList<>();
 
 
-        layoutManager = new LinearLayoutManager(getApplicationContext(), RecyclerView.VERTICAL, false);
+        layoutManager = new LinearLayoutManager(getContext(), RecyclerView.VERTICAL, false);
         recyclerView.setLayoutManager(layoutManager);
         //recyclerView.hasFixedSize();
         recyclerView.setHasFixedSize(true);
 
 
-confirmed = new ArrayList<>();
+        confirmed = new ArrayList<>();
         deaths = new ArrayList<>();
         recovered = new ArrayList<>();
 
         coords = new ArrayList<>();
 
         name.setText(country);
+        provi.setText(province);
 
 
 
@@ -173,9 +196,9 @@ confirmed = new ArrayList<>();
         getNews(country);
 
 
-ArrayList<BarEntry> barEntries = new ArrayList<>();
+        ArrayList<BarEntry> barEntries = new ArrayList<>();
 
-    barEntries.add(new BarEntry(0, Float.valueOf(third)));
+        barEntries.add(new BarEntry(0, Float.valueOf(third)));
         barEntries.add(new BarEntry(1, Float.valueOf(second)));
         barEntries.add(new BarEntry(2, Float.valueOf(last)));
 
@@ -191,9 +214,9 @@ ArrayList<BarEntry> barEntries = new ArrayList<>();
         countries = new String[] {day3, day2, day1, "sample", "sample2"};
 
 
-getCoordinates(country, province);
+        getCoordinates(country, province);
 
-plotMap();
+        plotMap();
 
 
         ArrayList<BarEntry> barEntries2 = new ArrayList<>();
@@ -242,6 +265,15 @@ plotMap();
         xAxis.setPosition(XAxis.XAxisPosition.TOP);
 
 
+        View focus = main.getCurrentFocus();
+        if(focus!=null)
+        {
+
+            InputMethodManager imm = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(focus.getWindowToken(), 0);
+        }
+
+        return view;
     }
 
     private void getNews(String country) {
@@ -258,11 +290,19 @@ plotMap();
                 List<NewsModel.ArticlesBean> list = new ArrayList<>();
                 list = response.body().getArticles();
 
-               // Log.d("content", list.get(0).getTitle());
+                // Log.d("content", list.get(0).getTitle());
+                if(response.body().getArticles().isEmpty())
+                {
+                    news_banner.setVisibility(View.INVISIBLE);
+                }
+                else
+                {
+                    news_banner.setVisibility(View.VISIBLE);
+                }
 
                 newsList = response.body().getArticles();
                 Log.d("length", String.valueOf(newsList.size()));
-                adapter = new NewsAdapter(CountryDetail.this, newsList);
+                adapter = new NewsAdapter(getContext(), newsList);
                 recyclerView.setAdapter(adapter);
                 adapter.notifyDataSetChanged();
 
@@ -315,18 +355,7 @@ plotMap();
     }
 
 
-    @Override
-    public void onSaveInstanceState(@NonNull Bundle outState, @NonNull PersistableBundle outPersistentState) {
-        super.onSaveInstanceState(outState, outPersistentState);
 
-        Bundle mapViewBundle = outState.getBundle(MAP_VIEW_BUNDLE_KEY);
-        if(mapViewBundle == null){
-            mapViewBundle = new Bundle();
-            outState.putBundle(MAP_VIEW_BUNDLE_KEY, mapViewBundle);
-        }
-
-        mapView.onSaveInstanceState(mapViewBundle);
-    }
 
 
 
@@ -548,22 +577,22 @@ plotMap();
 
         @NonNull
         @Override
-        public NewsViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        public NewsAdapter.NewsViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             View layout = LayoutInflater.from(parent.getContext()).inflate(R.layout.single_news_item, null, false);
-            NewsViewHolder holder = new NewsViewHolder(layout);
+            NewsAdapter.NewsViewHolder holder = new NewsAdapter.NewsViewHolder(layout);
             return holder;
         }
 
         @Override
-        public void onBindViewHolder(@NonNull NewsViewHolder holder, int position) {
+        public void onBindViewHolder(@NonNull NewsAdapter.NewsViewHolder holder, int position) {
 
             holder.tit.setText(newsList.get(position).getTitle());
             holder.tit.setSelected(true);
             holder.desc.setText(newsList.get(position).getDescription());
             holder.pub.setText(newsList.get(position).getPublishedAt());
 
-            Picasso.Builder builder = new Picasso.Builder(getApplicationContext());
-            builder.downloader(new OkHttp3Downloader(getApplicationContext()));
+            Picasso.Builder builder = new Picasso.Builder(getContext());
+            builder.downloader(new OkHttp3Downloader(getContext()));
             builder.build().load(newsList.get(position).getUrlToImage())//model.getLogo_url())
                     // .placeholder((R.drawable.ic_launcher_background))
                     //.error(R.drawable.ic_launcher_background)
@@ -598,25 +627,25 @@ plotMap();
 
 
     @Override
-    protected void onStart() {
+    public void onStart() {
         super.onStart();
         mapView.onStart();
     }
 
     @Override
-    protected void onStop() {
+    public void onStop() {
         super.onStop();
         mapView.onStop();
     }
 
     @Override
-    protected void onPause() {
+    public void onPause() {
         super.onPause();
         mapView.onPause();
     }
 
     @Override
-    protected void onDestroy() {
+    public void onDestroy() {
         super.onDestroy();
         mapView.onDestroy();
     }
@@ -628,9 +657,15 @@ plotMap();
     }
 
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
         mapView.onResume();
     }
 
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+
+        main = (Activity) context;
+    }
 }

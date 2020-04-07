@@ -1,5 +1,8 @@
 package com.gauravnadar.covid19stats;
 
+import android.app.ProgressDialog;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -28,6 +31,15 @@ public class Worker extends Thread {
         }
 
         Log.i("Terminated", "xx");
+
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+
+
+            }
+        });
+
     }
 
 
@@ -41,4 +53,6 @@ public class Worker extends Thread {
     {
         alive.set(false);
     }
+
+
 }

@@ -1,4 +1,4 @@
-package com.gauravnadar.covid19stats;
+package com.gauravnadar.covid19stats.Modals;
 
 import android.content.res.Configuration;
 

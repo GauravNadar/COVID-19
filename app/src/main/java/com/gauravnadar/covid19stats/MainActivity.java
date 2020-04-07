@@ -9,19 +9,20 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.net.ConnectivityManager;
-import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 
+import com.gauravnadar.covid19stats.Modals.DailyReportsModel;
+import com.gauravnadar.covid19stats.Modals.MyItem;
 import com.github.javiersantos.appupdater.AppUpdater;
 import com.github.javiersantos.appupdater.enums.Display;
-import com.github.javiersantos.appupdater.enums.Duration;
 import com.github.javiersantos.appupdater.enums.UpdateFrom;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -32,9 +33,9 @@ import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import android.os.Message;
 import android.os.PersistableBundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -52,7 +53,6 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.view.DefaultClusterRenderer;
-import com.google.maps.android.heatmaps.WeightedLatLng;
 import com.google.maps.android.ui.IconGenerator;
 import com.opencsv.CSVReader;
 
@@ -63,36 +63,30 @@ import androidx.appcompat.widget.Toolbar;
 
 import android.view.Menu;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Calendar;
+import java.util.TimeZone;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback {
 
-    FileInputStream in = null;
-    FileOutputStream out = null;
-    FileOutputStream out2 = null;
-    FileOutputStream out3 = null;
 
-    FileInputStream Dailyin = null;
-    FileOutputStream Dailyout = null;
     ArrayList<DailyReportsModel> dailList;
-
-
-    BottomSheetBehavior bottomSheetBehavior;
-
-
     GoogleMap map;
     MapView mapView;
     private static final String MAP_VIEW_BUNDLE_KEY = "MapViewBundleKey";
@@ -105,13 +99,11 @@ public class MainActivity extends AppCompatActivity
     Boolean MapSet = false;
     TextView usage;
 
-    List<LatLng> listLL;
-    List<WeightedLatLng> listWLL;
-
     ClusterManager<MyItem> mClusterManager;
 
     AppUpdater appUpdater;
-
+    String lastUpdatedOn;
+    FloatingActionButton fab;
 
 
 
@@ -119,11 +111,36 @@ public class MainActivity extends AppCompatActivity
     AlertDialog.Builder alert;
     AlertDialog dialog;
 
+    SharedPreferences prefs;
+    SharedPreferences.Editor editor;
+    BackgroundTask task;
+    FrameLayout container;
+
+    FileOutputStream out = null;
+    FileOutputStream out2 = null;
+    FileOutputStream out3 = null;
+    FileOutputStream Dailyout = null;
+
+    String date2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        progress = new ProgressDialog(MainActivity.this);
+        progress.setMessage("This may take up few seconds depending on your Internet speed");
+        progress.setTitle("Loading Global Data");
+        progress.setCanceledOnTouchOutside(false);
+
+        prefs = MainActivity.this.getPreferences(MODE_PRIVATE);
+        prefs.getBoolean("firstStart", true);
+
+
+
+
+
+
 
         alert = new AlertDialog.Builder(this);
         alert.setCancelable(false);
@@ -171,14 +188,33 @@ public class MainActivity extends AppCompatActivity
         if(!signal)
         {
             dialog.show();
+            //appUpdater.start();
+        }
+        else{
+
+            appUpdater.start();
+
+            if(prefs.getBoolean("firstStart", true))
+            {
+                Log.e("background", "called");
+                task = new BackgroundTask();
+                task.execute();
+            }
+
+           // getSupportFragmentManager().beginTransaction().replace(R.id.container, new WorldCovidTracker()).commit();
         }
 
-        appUpdater.start();
+        //appUpdater.start();
+
+
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        FloatingActionButton fab = findViewById(R.id.fab);
+        fab = findViewById(R.id.fab);
+        fab.setImageResource(R.drawable.wait);
         usage = (TextView) findViewById(R.id.usage);
+        container = (FrameLayout) findViewById(R.id.container);
+
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -204,20 +240,26 @@ public class MainActivity extends AppCompatActivity
         toggle.syncState();
         navigationView.setNavigationItemSelectedListener(this);
 
-        progress = new ProgressDialog(MainActivity.this);
-        progress.setMessage("This may take up few seconds depending on your Internet speed");
-        progress.setTitle("Loading Global Data");
-        progress.setCanceledOnTouchOutside(false);
+
+/*
+
+        if(prefs.getBoolean("firstStart", true))
+        {
+            Log.e("background", "called");
+            task = new BackgroundTask();
+            task.execute();
+        }
+*/
+
+
+
+
+       getSupportFragmentManager().beginTransaction().replace(R.id.container, new WorldCovidTracker()).commit();
 
 
 
 
 
-
-
-
-
-        startJob();
 
 
         // View bottomsheet = findViewById(R.id.nested);
@@ -228,8 +270,6 @@ public class MainActivity extends AppCompatActivity
 
         dailList = new ArrayList<>();
 
-        listLL = new ArrayList<>();
-        listWLL = new ArrayList<>();
 
 
         Bundle mapViewBundle = null;
@@ -243,19 +283,6 @@ public class MainActivity extends AppCompatActivity
 
         getDailyReports();
 
-
-        try {
-            in = openFileInput("stats.csv");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        try {
-            out = openFileOutput("stats.csv", MODE_PRIVATE);
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
 
 
         // getData();
@@ -290,6 +317,10 @@ public class MainActivity extends AppCompatActivity
 
     }
 
+
+
+
+
     private void getDailyReports() {
 
 
@@ -311,6 +342,9 @@ public class MainActivity extends AppCompatActivity
 
                 DailyReportsModel data = new DailyReportsModel(nextLine[2], nextLine[3], nextLine[4], nextLine[5], nextLine[6], nextLine[7], nextLine[8], nextLine[9], nextLine[10]);
                 if (nextLine[3].equals("Country_Region")) {
+
+                    int last_row = nextLine.length-1;
+                    lastUpdatedOn = nextLine[last_row];
                 } else {
                     dailList.add(data);
                 }
@@ -453,20 +487,13 @@ public class MainActivity extends AppCompatActivity
 
                 );*/
 
-
-            MyItem offsetItem = new MyItem(Double.valueOf(dailList.get(i).getLatitude()), Double.valueOf(dailList.get(i).getLongitude()));
-
-
-            mClusterManager.addItem(offsetItem);
+if(!dailList.get(i).getLatitude().isEmpty() && !dailList.get(i).getLongitude().isEmpty()) {
+    MyItem offsetItem = new MyItem(Double.valueOf(dailList.get(i).getLatitude()), Double.valueOf(dailList.get(i).getLongitude()));
 
 
-            LatLng latLng2 = new LatLng(Double.valueOf(dailList.get(i).getLatitude()), Double.valueOf(dailList.get(i).getLongitude()));
-            WeightedLatLng latLng3 = new WeightedLatLng(latLng2, 500);
-            int rad = 0;
+    mClusterManager.addItem(offsetItem);
 
-
-            listLL.add(latLng2);
-            listWLL.add(latLng3);
+}
 
            /* if(Integer.valueOf(dailList.get(i).getConfirmed()) <100 )
             {
@@ -551,7 +578,8 @@ public class MainActivity extends AppCompatActivity
                 );
 
 
-                map.moveCamera(CameraUpdateFactory.newLatLng(myItem.getPosition()));
+                map.animateCamera(CameraUpdateFactory.newLatLng(myItem.getPosition()));
+
 
                 markerShow = true;
 
@@ -589,7 +617,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
+        //getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
 
@@ -616,20 +644,32 @@ public class MainActivity extends AppCompatActivity
 
         if (id == R.id.nav_home) {
 
-            startActivity(new Intent(getApplicationContext(), MainActivity.class));
+            //startActivity(new Intent(getApplicationContext(), MainActivity.class));
+            getSupportFragmentManager().beginTransaction().replace(R.id.container, new WorldCovidTracker()).commit();
         } else if (id == R.id.nav_gallery) {
 
-            startActivity(new Intent(getApplicationContext(), CountryList.class));
+            //startActivity(new Intent(getApplicationContext(), CountryList.class));
+            getSupportFragmentManager().beginTransaction().replace(R.id.container, new WorldListView()).commit();
 
         } else if (id == R.id.nav_slideshow) {
 
-            Intent sendMail = new Intent(android.content.Intent.ACTION_SEND);
+            Intent sendMail = new Intent(Intent.ACTION_SEND);
             sendMail.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             sendMail.setType("plain/text");
+            //sendMail.setClassName("com.google.android.gm", "com.google.android.gm.ComposeActivityGmail");
             sendMail.putExtra(android.content.Intent.EXTRA_EMAIL, new String[]{"nadargaurav@gmail.com"});
             sendMail.putExtra(Intent.EXTRA_SUBJECT, "Bug Reporting for COVID-19 Tracker Android Application");
-            startActivity(Intent.createChooser(sendMail, "Send Bug Report..."));
+            //startActivity(Intent.createChooser(sendMail, "Send Bug Report..."));
+            startActivity(sendMail);
 
+        }
+        else if(id == R.id.india_list){
+
+           // startActivity(new Intent(getApplicationContext(), IndiaList.class));
+            getSupportFragmentManager().beginTransaction().replace(R.id.container, new IndiaCovidTracker()).commit();
+        }
+        else if(id == R.id.india_listView){
+            getSupportFragmentManager().beginTransaction().replace(R.id.container, new IndiaListView()).commit();
         }
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -711,31 +751,241 @@ public class MainActivity extends AppCompatActivity
     }
 
 
-    public class BackgroundTask extends AsyncTask<Void, Void, Void> {
+    public class BackgroundTask extends AsyncTask<Void, Void, Boolean> {
 
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
 
-            Log.i("onPre", "0");
+            DateFormat df = new SimpleDateFormat("MM-dd-yyyy");
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.DATE, -1);
+
+            df.setTimeZone(TimeZone.getTimeZone("UTC"));
+            date2 = df.format(cal.getTime());
+
+
+            progress.show();
+            Log.i("onPre", "level 0");
 
         }
 
         @Override
-        protected void onPostExecute(Void aVoid) {
-            super.onPostExecute(aVoid);
-            Log.i("omPost", "2");
-            progress.dismiss();
+        protected void onPostExecute(Boolean result) {
+            super.onPostExecute(result);
+            Log.i("omPost", "level 2");
+            if(result) {
+                editor = prefs.edit();
+                editor.putBoolean("firstStart", false);
+                editor.commit();
+                progress.dismiss();
+                startJob();
+                getSupportFragmentManager().beginTransaction().replace(R.id.container, new WorldCovidTracker()).commit();
+            }
 
         }
 
         @Override
-        protected Void doInBackground(Void... voids) {
-            Log.i("doing", "1");
-            startJob();
-            return null;
+        protected Boolean doInBackground(Void... voids) {
+            Log.i("doing", "level 1");
+
+
+            try {
+                out = openFileOutput("stats.csv", MODE_PRIVATE);
+
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+
+            final OkHttpClient client = new OkHttpClient();
+            String url = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv";
+
+            final Request request = new Request.Builder()
+                    .url(url)
+                    .build();
+
+
+
+            try {
+                Response response = client.newCall(request).execute();
+                String data = response.body().string();
+                out.write(data.getBytes());
+                Log.i("task", "write 1");
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                if (out != null) {
+                    try {
+                        out.close();
+                        //loadData();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+
+
+            //#################################################################
+
+
+
+            OkHttpClient client2 = new OkHttpClient();
+            String url2 = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv";
+
+            Request request2 = new Request.Builder()
+                    .url(url2)
+                    .build();
+
+
+            try {
+                out2 = openFileOutput("deaths.csv", MODE_PRIVATE);
+
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+
+
+
+
+
+
+
+            try {
+                Response response = client2.newCall(request2).execute();
+                String data = response.body().string();
+                out2.write(data.getBytes());
+                Log.e("error", "not null");
+
+                Log.i("task", "write 2");
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                Log.e("error", e.getMessage());
+
+            } finally {
+                if (out2 != null) {
+                    try {
+                        out2.close();
+
+                        //getDeaths();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+
+                    }
+                }
+                else {
+
+                }
+            }
+
+
+            //#################################################################################
+
+
+
+
+            OkHttpClient client3 = new OkHttpClient();
+            String url3 = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv";
+
+            Request request3 = new Request.Builder()
+                    .url(url3)
+                    .build();
+
+
+            try {
+                out3 = openFileOutput("recovered.csv", MODE_PRIVATE);
+
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+
+
+
+
+
+
+
+            try {
+                Response response = client3.newCall(request3).execute();
+                String data = response.body().string();
+                out3.write(data.getBytes());
+
+                Log.i("task", "write 3");
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                if (out3 != null) {
+                    try {
+                        out3.close();
+                        //getRecovered();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+
+
+
+            //################################################################################
+
+
+
+
+            try {
+                Dailyout = openFileOutput("daily.csv", MODE_PRIVATE);
+
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+
+
+            OkHttpClient clientD = new OkHttpClient();
+            String urlD = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/"+date2+".csv";
+
+            Request requestD = new Request.Builder()
+                    .url(urlD)
+                    .build();
+
+
+
+
+
+
+
+
+            try {
+                Response response = clientD.newCall(requestD).execute();
+                String data = response.body().string();
+                Dailyout.write(data.getBytes());
+                Log.i("task", "write 4");
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                if (out != null) {
+                    try {
+                        Dailyout.close();
+
+                        //                loadDailyReports();
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+
+
+
+                        return true;
         }
+
     }
+
+
 
     public boolean isNetworkConnected() {
 
@@ -814,7 +1064,20 @@ public class MainActivity extends AppCompatActivity
     protected void onResume() {
         super.onResume();
         mapView.onResume();
-        appUpdater.start();
+        Boolean signal = isNetworkConnected();
+        if(!signal)
+        {
+            dialog.show();
+        }
+        else {
+            appUpdater.start();
+            if(prefs.getBoolean("firstStart", true))
+            {
+                Log.e("background", "called");
+                task = new BackgroundTask();
+                task.execute();
+            }
+        }
     }
 
 

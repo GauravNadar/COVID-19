@@ -12,8 +12,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-
-
+        <activity android:name=".IndiaList"></activity>
         <activity android:name=".CountryList" />
         <activity android:name=".CountryDetail" />
         <activity

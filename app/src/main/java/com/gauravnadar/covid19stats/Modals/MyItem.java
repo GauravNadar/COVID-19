@@ -1,4 +1,4 @@
-package com.gauravnadar.covid19stats;
+package com.gauravnadar.covid19stats.Modals;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.clustering.ClusterItem;
@@ -7,6 +7,12 @@ public class MyItem implements ClusterItem {
     LatLng mPosition;
      String mTitle;
      String mSnippet;
+     String mConfirmed;
+
+     public MyItem()
+     {
+
+     }
 
     public MyItem(double lat, double lng) {
         mPosition = new LatLng(lat, lng);
@@ -31,5 +37,25 @@ public class MyItem implements ClusterItem {
     @Override
     public String getSnippet() {
         return mSnippet;
+    }
+
+    public void setmPosition(LatLng mPosition) {
+        this.mPosition = mPosition;
+    }
+
+    public void setmTitle(String mTitle) {
+        this.mTitle = mTitle;
+    }
+
+    public void setmSnippet(String mSnippet) {
+        this.mSnippet = mSnippet;
+    }
+
+    public String getmConfirmed() {
+        return mConfirmed;
+    }
+
+    public void setmConfirmed(String mConfirmed) {
+        this.mConfirmed = mConfirmed;
     }
 }
