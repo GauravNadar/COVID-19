@@ -122,7 +122,7 @@ public class IndiaListView extends Fragment {
 
                     Log.i("full", col.text());
 
-                    if(a == rows.size() || a == rows.size()-1 || a == rows.size()-2) {
+                    if(a == rows.size() || a == rows.size()-1 || a == rows.size()-2 || a== rows.size()-3) {
 
                     }
                     else {
