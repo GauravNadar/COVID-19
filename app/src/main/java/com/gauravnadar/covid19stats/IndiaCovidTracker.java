@@ -179,10 +179,10 @@ public class IndiaCovidTracker extends Fragment implements OnMapReadyCallback {
 
                     Log.i("full", col.text());
 
-                    if(a == rows.size() || a == rows.size()-1 || a == rows.size()-2) {
+                    if(a == rows.size() || a == rows.size()-1 || a == rows.size()-2 || a==rows.size()-3) {
 
                     }
-                    else {
+                    else{
                         list.add(new IndiaListModel(col.get(1).text(), col.get(2).text(), col.get(3).text(), col.get(4).text()));   //state conf reco deat
                     }
 

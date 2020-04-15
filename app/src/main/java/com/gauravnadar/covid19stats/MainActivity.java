@@ -67,38 +67,40 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.TimeZone;
 
+import okhttp3.Call;
+import okhttp3.Connection;
+import okhttp3.EventListener;
 import okhttp3.OkHttpClient;
+import okhttp3.Protocol;
 import okhttp3.Request;
 import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback {
+        implements NavigationView.OnNavigationItemSelectedListener{
 
 
     ArrayList<DailyReportsModel> dailList;
-    GoogleMap map;
-    MapView mapView;
-    private static final String MAP_VIEW_BUNDLE_KEY = "MapViewBundleKey";
 
     ProgressDialog progress;
 
-    Boolean markerShow = false;
-    Marker mk = null;
 
-    Boolean MapSet = false;
-    TextView usage;
-
-    ClusterManager<MyItem> mClusterManager;
 
     AppUpdater appUpdater;
     String lastUpdatedOn;
@@ -180,14 +182,15 @@ public class MainActivity extends AppCompatActivity
                 .setCancelable(false) // Dialog could not be dismissable
                 .setUpdateXML("https://raw.githubusercontent.com/GauravNadar/COVID-19/master/app/update.xml")
                 .showAppUpdated(false);
-
+       // task = new BackgroundTask();
+        //task.execute();
 
 
         Boolean signal = isNetworkConnected();
         if(!signal)
         {
-            dialog.show();
-            //appUpdater.start();
+           dialog.show();
+           //appUpdater.start();
         }
         else{
 
@@ -198,6 +201,10 @@ public class MainActivity extends AppCompatActivity
                 Log.e("background", "called");
                 task = new BackgroundTask();
                 task.execute();
+            }
+            else
+            {
+                getSupportFragmentManager().beginTransaction().replace(R.id.container, new WorldCovidTracker()).commit();
             }
 
            // getSupportFragmentManager().beginTransaction().replace(R.id.container, new WorldCovidTracker()).commit();
@@ -211,7 +218,7 @@ public class MainActivity extends AppCompatActivity
         setSupportActionBar(toolbar);
         fab = findViewById(R.id.fab);
         fab.setImageResource(R.drawable.wait);
-        usage = (TextView) findViewById(R.id.usage);
+        //usage = (TextView) findViewById(R.id.usage);
         container = (FrameLayout) findViewById(R.id.container);
 
         fab.setOnClickListener(new View.OnClickListener() {
@@ -220,15 +227,7 @@ public class MainActivity extends AppCompatActivity
                /* Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show();*/
 
-                if (!MapSet) {
-                    getDailyReports();
-                    loadMap();
-                    //usage.setVisibility(View.VISIBLE);
-                    MapSet = true;
-                } else {
 
-                    Toast.makeText(MainActivity.this, "All Locations Already Tracked", Toast.LENGTH_LONG).show();
-                }
             }
         });
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -253,7 +252,7 @@ public class MainActivity extends AppCompatActivity
 
 
 
-       getSupportFragmentManager().beginTransaction().replace(R.id.container, new WorldCovidTracker()).commit();
+      // getSupportFragmentManager().beginTransaction().replace(R.id.container, new WorldCovidTracker()).commit();
 
 
 
@@ -262,25 +261,6 @@ public class MainActivity extends AppCompatActivity
 
 
         // View bottomsheet = findViewById(R.id.nested);
-
-        mapView = findViewById(R.id.map);
-        // bottomSheetBehavior = BottomSheetBehavior.from(bottomsheet);
-
-
-        dailList = new ArrayList<>();
-
-
-
-        Bundle mapViewBundle = null;
-        if (savedInstanceState != null) {
-            mapViewBundle = savedInstanceState.getBundle(MAP_VIEW_BUNDLE_KEY);
-        }
-
-
-        mapView.onCreate(mapViewBundle);
-        mapView.getMapAsync(this);
-
-        getDailyReports();
 
 
 
@@ -320,287 +300,13 @@ public class MainActivity extends AppCompatActivity
 
 
 
-    private void getDailyReports() {
 
 
-        loadDailyReports();
 
 
-    }
 
-    private void loadDailyReports() {
 
-        try {
 
-            // FileInputStream input = new FileInputStream("stats.csv");
-            CSVReader reader = new CSVReader(new FileReader("data/data/com.gauravnadar.covid19stats/files/daily.csv"));
-            String[] nextLine;
-
-            while ((nextLine = reader.readNext()) != null) {
-
-
-                DailyReportsModel data = new DailyReportsModel(nextLine[2], nextLine[3], nextLine[4], nextLine[5], nextLine[6], nextLine[7], nextLine[8], nextLine[9], nextLine[10]);
-                if (nextLine[3].equals("Country_Region")) {
-
-                    int last_row = nextLine.length-1;
-                    lastUpdatedOn = nextLine[last_row];
-                } else {
-                    dailList.add(data);
-                }
-
-
-            }
-            Log.d("sixe", String.valueOf(dailList.size()));
-
-
-            //loadMap();
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-
-    }
-
-
-    @Override
-    public void onSaveInstanceState(@NonNull Bundle outState, @NonNull PersistableBundle outPersistentState) {
-        super.onSaveInstanceState(outState, outPersistentState);
-
-        Bundle mapViewBundle = outState.getBundle(MAP_VIEW_BUNDLE_KEY);
-        if (mapViewBundle == null) {
-            mapViewBundle = new Bundle();
-            outState.putBundle(MAP_VIEW_BUNDLE_KEY, mapViewBundle);
-        }
-
-        mapView.onSaveInstanceState(mapViewBundle);
-    }
-
-
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-
-        Log.e("timing", "onMapReady");
-        map = googleMap;
-
-
-        map.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-            @Override
-            public void onMapClick(LatLng latLng) {
-
-                if (markerShow) {
-                    mk.remove();
-                }
-
-            }
-        });
-
-        final IconGenerator icon = new IconGenerator(this);
-
-        map.setOnCircleClickListener(new GoogleMap.OnCircleClickListener() {
-            @Override
-            public void onCircleClick(Circle circle) {
-
-
-                if (markerShow) {
-                    //mk.setVisible(false);
-                    mk.remove();
-                }
-
-                String co = null, d = null, r = null, n = null, p = null;
-
-                DailyReportsModel model1 = new DailyReportsModel();
-
-                for (DailyReportsModel model : dailList) {
-                    if (model.getLongitude().equals(String.valueOf(circle.getCenter().longitude)) && model.getLatitude().equals(String.valueOf(circle.getCenter().latitude))) {
-                        co = model.getConfirmed();
-                        d = model.getDeaths();
-                        r = model.getRecovered();
-                        n = model.getCountry();
-                        p = model.getProvince();
-
-                    }
-                }
-
-                mk = map.addMarker(new MarkerOptions()
-                        .icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(MainActivity.this, R.drawable.amu_bubble_shadow, co, d, r, n, p)))
-                        .position(circle.getCenter())
-                        .anchor(icon.getAnchorU(), icon.getAnchorV())
-                );
-
-
-                map.moveCamera(CameraUpdateFactory.newLatLng(circle.getCenter()));
-
-                markerShow = true;
-
-
-            }
-        });
-
-
-        map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
-            @Override
-            public boolean onMarkerClick(Marker marker) {
-
-                Toast.makeText(MainActivity.this, marker.getPosition().toString(), Toast.LENGTH_LONG).show();
-                return true;
-            }
-        });
-
-
-    }
-
-
-    public void loadMap() {
-
-        Log.e("timing", "loadMap");
-
-        final IconGenerator icon = new IconGenerator(this);
-        String rColour = "";
-        LatLng latLng = null;
-        int fixed = 200000;
-
-        mClusterManager = new ClusterManager<MyItem>(this, map);
-        map.setOnCameraIdleListener(mClusterManager);
-        map.setOnMarkerClickListener(mClusterManager);
-
-        MyCustomRenderer renderer = new MyCustomRenderer(MainActivity.this, map, mClusterManager);
-
-
-        mClusterManager.setRenderer(renderer);
-        DailyReportsModel model = new DailyReportsModel();
-
-        for (int i = 1; i < dailList.size(); i++) {
-
-
-            // latLng = new LatLng(Double.valueOf(dailList.get(i).getLatitude()),  Double.valueOf(dailList.get(i).getLongitude()));
-               /* Circle c = map.addCircle(new CircleOptions()
-                        .center(latLng)
-                        .radius(fixed)
-                        //.getStrokeWidth()
-                        .fillColor(0x88AB1006)  //fillColor(0x220000FF)
-                        .clickable(true)
-                        .strokeWidth(2.0f)
-
-                );*/
-
-if(!dailList.get(i).getLatitude().isEmpty() && !dailList.get(i).getLongitude().isEmpty()) {
-    MyItem offsetItem = new MyItem(Double.valueOf(dailList.get(i).getLatitude()), Double.valueOf(dailList.get(i).getLongitude()));
-
-
-    mClusterManager.addItem(offsetItem);
-
-}
-
-           /* if(Integer.valueOf(dailList.get(i).getConfirmed()) <100 )
-            {
-                rad=100000;  //100000
-                rColour = "03AB1A";  //green
-
-            }
-            else if(Integer.valueOf(dailList.get(i).getConfirmed()) >100 && Integer.valueOf(dailList.get(i).getConfirmed()) >1000) {
-                rad = 150000;
-                rColour = "00A5AB";  //bluish
-
-            }
-            else if (Integer.valueOf(dailList.get(i).getConfirmed()) >1000 && Integer.valueOf(dailList.get(i).getConfirmed()) >5000) {
-
-                rad = 300000;
-                rColour = "001CAB";
-
-            }
-            else if (Integer.valueOf(dailList.get(i).getConfirmed()) >5000 && Integer.valueOf(dailList.get(i).getConfirmed()) >10000) {
-
-                rad = 400000;
-                rColour = "8C2BAB"; //purple
-
-            }
-
-            else if (Integer.valueOf(dailList.get(i).getConfirmed()) >10000 && Integer.valueOf(dailList.get(i).getConfirmed()) >50000)
-            {
-                rad = 700000;
-                rColour= "A9AB47";
-            }
-            else
-            {
-                rad = 1000000;
-             rColour= "AB1006";
-            }*/
-
-
-        }
-
-
-
-    /*    // Create a heat map tile provider, passing it the latlngs of the police stations.
-       HeatmapTileProvider mProvider = new HeatmapTileProvider.Builder()
-                .weightedData(listWLL)
-               .radius(50)
-                .build();
-        // Add a tile overlay to the map, using the heat map tile provider.
-        TileOverlay mOverlay = map.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
-*/
-
-
-        mClusterManager.setOnClusterItemClickListener(new ClusterManager.OnClusterItemClickListener<MyItem>() {
-            @Override
-            public boolean onClusterItemClick(MyItem myItem) {
-
-                // Toast.makeText(MainActivity.this, myItem.getPosition().toString(), Toast.LENGTH_LONG).show();
-
-                if (markerShow) {
-                    //mk.setVisible(false);
-                    mk.remove();
-                }
-
-                String co = null, d = null, r = null, n = null, p = null;
-
-                DailyReportsModel model1 = new DailyReportsModel();
-
-                for (DailyReportsModel model : dailList) {
-                    if (model.getLongitude().equals(String.valueOf(myItem.getPosition().longitude)) && model.getLatitude().equals(String.valueOf(myItem.getPosition().latitude))) {
-                        co = model.getConfirmed();
-                        d = model.getDeaths();
-                        r = model.getRecovered();
-                        n = model.getCountry();
-                        p = model.getProvince();
-
-                    }
-                }
-
-                mk = map.addMarker(new MarkerOptions()
-                        .icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(MainActivity.this, R.drawable.amu_bubble_shadow, co, d, r, n, p)))
-                        .position(myItem.getPosition())
-                        .anchor(icon.getAnchorU(), icon.getAnchorV())
-                );
-
-
-                map.animateCamera(CameraUpdateFactory.newLatLng(myItem.getPosition()));
-
-
-                markerShow = true;
-
-                return true;
-            }
-        });
-
-
-        mClusterManager.setOnClusterClickListener(new ClusterManager.OnClusterClickListener<MyItem>() {
-            @Override
-            public boolean onClusterClick(Cluster<MyItem> cluster) {
-
-
-                Toast.makeText(MainActivity.this,"Zoom In to view grouped markers", Toast.LENGTH_LONG).show();
-                return true;
-            }
-        });
-
-
-        usage.setText("Global Map\\n you can pinch zoom  move around and click on markers to view current stats");
-
-    }
 
 
     @Override
@@ -750,6 +456,8 @@ if(!dailList.get(i).getLatitude().isEmpty() && !dailList.get(i).getLongitude().i
     }
 
 
+
+
     public class BackgroundTask extends AsyncTask<Void, Void, Boolean> {
 
         @Override
@@ -796,7 +504,7 @@ if(!dailList.get(i).getLatitude().isEmpty() && !dailList.get(i).getLongitude().i
                 e.printStackTrace();
             }
 
-            final OkHttpClient client = new OkHttpClient();
+            final OkHttpClient client = new OkHttpClient.Builder().build();
             String url = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv";
 
             final Request request = new Request.Builder()
@@ -812,7 +520,9 @@ if(!dailList.get(i).getLatitude().isEmpty() && !dailList.get(i).getLongitude().i
                 Log.i("task", "write 1");
 
             } catch (IOException e) {
-                e.printStackTrace();
+                //e.printStackTrace();
+                Log.e("connection", "catch", e);
+               // e.getLocalizedMessage();
             } finally {
                 if (out != null) {
                     try {
@@ -1031,38 +741,36 @@ if(!dailList.get(i).getLatitude().isEmpty() && !dailList.get(i).getLongitude().i
     @Override
     protected void onStart() {
         super.onStart();
-        mapView.onStart();
         appUpdater.start();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        mapView.onStop();
+
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        mapView.onPause();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mapView.onDestroy();
+
     }
 
     @Override
     public void onLowMemory() {
         super.onLowMemory();
-        mapView.onLowMemory();
+
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        mapView.onResume();
+
         Boolean signal = isNetworkConnected();
         if(!signal)
         {
