@@ -16,9 +16,28 @@
         android:id="@+id/world_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="50dp"
+        android:layout_marginTop="100dp"
         tools:listitem="@layout/single_country_stat_item">
 
     </androidx.recyclerview.widget.RecyclerView>
+
+    <TextView
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="50dp"
+        android:text="Country (State/Province)"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginLeft="8dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:layout_marginTop="50dp"
+        android:layout_gravity="right"
+        android:text="Confirmed Cases"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginRight="8dp"/>
 
 </FrameLayout>
