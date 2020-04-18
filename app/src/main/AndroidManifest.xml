@@ -33,6 +33,16 @@
         <service
             android:name=".Scheduler"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+
+<receiver android:name=".BroadcastReceiver.CustomBroadcastReceiver">
+
+    <intent-filter>
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+
+    </intent-filter>
+
+</receiver>
+
     </application>
 
 </manifest>
