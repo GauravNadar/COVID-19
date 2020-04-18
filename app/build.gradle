@@ -6,8 +6,8 @@ android {
         applicationId "com.gauravnadar.covid19stats"
         minSdkVersion 21
         targetSdkVersion 29
-        versionCode 4   //4
-        versionName "2.2.1alpha"
+        versionCode 5
+        versionName "2.3.0alpha"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
