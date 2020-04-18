@@ -37,6 +37,7 @@ import com.google.maps.android.clustering.view.DefaultClusterRenderer;
 import com.google.maps.android.ui.IconGenerator;
 import com.opencsv.CSVReader;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -45,6 +46,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
@@ -272,7 +274,10 @@ new PlotMarkers().execute();
             super.onPostExecute(aBoolean);
             progress.setProgress(75);
             progress.setVisibility(View.GONE);
-            update.setText("Last updated on "+date2);
+            //update.setText("Last updated on "+date2);
+            File file = new File("data/data/com.gauravnadar.covid19stats/files/daily.csv");
+            Date lastModified = new Date(file.lastModified());
+            update.setText("Last updated on "+lastModified.toString());
             FloatingActionButton fab = main.findViewById(R.id.fab);
             fab.setImageResource(R.drawable.refresh);
         }
