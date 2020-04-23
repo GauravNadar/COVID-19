@@ -3,4 +3,4 @@
 
 <img src="screens/Screenshot_worldMap.jpg" style=" width:100px ; height:100px " />
 
-![demo](screens/Screenshot_worldMap.png =80x200)
+![demo](screens/Screenshot_worldMap.png | width=50)
