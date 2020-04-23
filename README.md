@@ -3,4 +3,4 @@
 
 <img src="screens/Screenshot_worldMap.jpg" style=" width:100px ; height:100px " />
 
-![demo](screens/Screenshot_worldMap.png) <!-- .element height="150" width="40" -->
+![demo](screens/Screenshot_worldMap.png){:height="150px" width="40px"}
