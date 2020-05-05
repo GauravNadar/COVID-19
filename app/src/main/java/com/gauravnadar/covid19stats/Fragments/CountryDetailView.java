@@ -72,10 +72,10 @@ public class CountryDetailView extends Fragment implements OnMapReadyCallback {
     ArrayList<String> deaths;
     ArrayList<String> recovered;
 
-    String third, second, last;
-    String d_third, d_second, d_last;
+    String third="0", second="0", last="0";
+    String d_third="0", d_second="0", d_last="0";
     String day3, day2, day1;
-    String r_third, r_second, r_last;
+    String r_third = "0", r_second="0", r_last="0";
     String[] countries;
 
     MapView mapView;
@@ -233,6 +233,8 @@ public class CountryDetailView extends Fragment implements OnMapReadyCallback {
 
 
         ArrayList<BarEntry> barEntries3 = new ArrayList<>();
+
+
 
         barEntries3.add(new BarEntry(1, Float.valueOf(r_third)));
         barEntries3.add(new BarEntry(2, Float.valueOf(r_second)));
@@ -593,10 +595,23 @@ public class CountryDetailView extends Fragment implements OnMapReadyCallback {
 
             Picasso.Builder builder = new Picasso.Builder(getContext());
             builder.downloader(new OkHttp3Downloader(getContext()));
-            builder.build().load(newsList.get(position).getUrlToImage())//model.getLogo_url())
-                    // .placeholder((R.drawable.ic_launcher_background))
-                    //.error(R.drawable.ic_launcher_background)
-                    .into(holder.pic);
+try {
+    newsList.get(position).getUrlToImage();
+    if(!newsList.get(position).getUrlToImage().isEmpty()) {
+        builder.build().load(newsList.get(position).getUrlToImage())//model.getLogo_url())
+                // .placeholder((R.drawable.ic_launcher_background))
+                .error(R.drawable.ic_launcher_background)
+                .into(holder.pic);
+    }
+    else{
+
+    }
+}
+catch (Exception e){
+
+}
+
+
 
         }
 
