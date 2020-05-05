@@ -99,7 +99,6 @@
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="16dp"
                     android:gravity="center_vertical"
-                    android:text="TextView"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toEndOf="@+id/textView7"
 
